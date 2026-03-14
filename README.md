@@ -38,7 +38,7 @@ These are the orchestrator-level agents that manage the workflow:
 | Agent | Primary Model | Key Skills |
 |-------|---------------|------------|
 | oracle | GPT-5.4 (high) | context7-base-code-review, visual-explainer |
-| orchestrator | MiniMax M2.5 Free (Cline) | dispatching-parallel-agents, cartography, writing-plans, git-worktrees, verification |
+| orchestrator | GPT-5.4 | dispatching-parallel-agents, cartography, writing-plans, git-worktrees, verification |
 | fixer | GPT-5.3-codex (low) | systematic-debugging, context7-driven-dev |
 | designer | GPT-5.4 (medium) | visual-explainer, agent-browser |
 | librarian | MiniMax M2.5 Free (Kilo, low) | context7-base-code-review, cartography, visual-explainer |

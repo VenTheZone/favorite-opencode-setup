@@ -16,7 +16,7 @@
         ]
       },
       "orchestrator": {
-        "model": "cline/minimax-m2.5-free",
+        "model": "openai/gpt-5.4",
         "skills": [
           "using-superpowers",
           "dispatching-parallel-agents",
