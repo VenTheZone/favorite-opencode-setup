@@ -16,7 +16,7 @@
         ]
       },
       "orchestrator": {
-        "model": "openrouter/hunter-alpha",
+        "model": "cline/glm-5-free",
         "skills": [
           "using-superpowers",
           "dispatching-parallel-agents",
@@ -59,7 +59,7 @@
         ]
       },
       "librarian": {
-        "model": "openrouter/healer-alpha",
+        "model": "kilo/minimax/minimax-m2.5-free",
         "variant": "low",
         "skills": [
           "context7-base-code-review",
@@ -95,17 +95,17 @@
     "chains": {
       "oracle": [
         "openai/gpt-5.4",
-        "openrouter/hunter-alpha",
+        "cline/glm-5-free",
         "kimi/kimi-k2.5",
         "openai/gpt-5.3-codex",
-        "openrouter/healer-alpha",
+        "kilo/minimax/minimax-m2.5-free",
         "openai/gpt-5.3-codex-spark"
       ],
       "orchestrator": [
-        "openrouter/hunter-alpha",
+        "cline/glm-5-free",
         "kimi/kimi-k2.5",
         "openai/gpt-5.4",
-        "openrouter/healer-alpha",
+        "kilo/minimax/minimax-m2.5-free",
         "openai/gpt-5.3-codex",
         "openai/gpt-5.3-codex-spark"
       ],
@@ -114,21 +114,21 @@
         "openai/gpt-5.3-codex-spark",
         "kimi/kimi-k2.5",
         "openai/gpt-5.4",
-        "openrouter/hunter-alpha",
-        "openrouter/healer-alpha"
+        "cline/glm-5-free",
+        "kilo/minimax/minimax-m2.5-free"
       ],
       "designer": [
         "openai/gpt-5.4",
-        "openrouter/healer-alpha",
-        "openrouter/hunter-alpha",
+        "kilo/minimax/minimax-m2.5-free",
+        "cline/glm-5-free",
         "kimi/kimi-k2.5",
         "openai/gpt-5.3-codex",
         "openai/gpt-5.3-codex-spark"
       ],
       "librarian": [
-        "openrouter/healer-alpha",
+        "kilo/minimax/minimax-m2.5-free",
         "openai/gpt-5.4",
-        "openrouter/hunter-alpha",
+        "cline/glm-5-free",
         "kimi/kimi-k2.5",
         "openai/gpt-5.3-codex",
         "openai/gpt-5.3-codex-spark"
@@ -138,8 +138,8 @@
         "openai/gpt-5.3-codex",
         "openai/gpt-5.3-codex-spark",
         "kimi/kimi-k2.5",
-        "openrouter/healer-alpha",
-        "openrouter/hunter-alpha",
+        "kilo/minimax/minimax-m2.5-free",
+        "cline/glm-5-free",
         "openai/gpt-5.4"
       ],
       "refactor-cleaner": [
