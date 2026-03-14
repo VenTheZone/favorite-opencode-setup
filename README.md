@@ -70,11 +70,21 @@ Explorer and refactor-cleaner start with free models since they run frequently f
 
 ## Setup
 
-Drop these into your OpenCode config:
+Clone directly to your OpenCode config directory:
 
 ```bash
-cp opencode.json ~/.config/opencode/
-cp oh-my-opencode-slim.json ~/.config/opencode/
+git clone https://github.com/VenTheZone/favorite-opencode-setup.git ~/.config/opencode
+cd ~/.config/opencode && npm install
+```
+
+Or if you already have a config:
+
+```bash
+cd ~/.config/opencode
+git init
+git remote add origin https://github.com/VenTheZone/favorite-opencode-setup.git
+git pull origin master
+npm install
 ```
 
 Then add your API keys to `~/.local/share/opencode/auth.json`:
@@ -85,8 +95,7 @@ Then add your API keys to `~/.local/share/opencode/auth.json`:
   "cline": { "type": "api", "key": "your-cline-key" },
   "openai": { "type": "api", "key": "your-openai-key" },
   "modal": { "type": "api", "key": "your-modal-key" },
-  "kimi": { "type": "api", "key": "your-kimi-key" },
-  "openrouter": { "type": "api", "key": "your-openrouter-key" }
+  "kimi": { "type": "api", "key": "your-kimi-key" }
 }
 ```
 
@@ -96,3 +105,5 @@ Then add your API keys to `~/.local/share/opencode/auth.json`:
 - **Cline**: https://app.cline.bot
 
 OpenAI, Modal, and Kimi require paid subscriptions.
+
+Add API keys via OpenCode's built-in auth storage or `~/.local/share/opencode/auth.json`.
