@@ -40,3 +40,5 @@ temp/
 
 # Allow skill folders
 !skills/*/
+# Agent config
+AGENTS.md
