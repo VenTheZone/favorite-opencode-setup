@@ -15,7 +15,7 @@ These are the specialist agents I call for specific jobs:
 
 | Agent | Model | What It Does |
 |-------|-------|--------------|
-| planner | GLM-5 Free (Cline) | Breaks down complex features into actionable steps |
+| planner | MiniMax M2.5 Free (Cline) | Breaks down complex features into actionable steps |
 | architect | GLM-5-FP8 (Modal) | Big-picture system design and technical decisions |
 | brainstormer | MiniMax M2.5 Free (Kilo) | Creative ideation and exploring alternatives |
 | code-reviewer | GPT-5.4 | General code quality and maintainability checks |
@@ -38,7 +38,7 @@ These are the orchestrator-level agents that manage the workflow:
 | Agent | Primary Model | Key Skills |
 |-------|---------------|------------|
 | oracle | GPT-5.4 (high) | context7-base-code-review, visual-explainer |
-| orchestrator | GLM-5 Free (Cline) | dispatching-parallel-agents, cartography, writing-plans, git-worktrees, verification |
+| orchestrator | MiniMax M2.5 Free (Cline) | dispatching-parallel-agents, cartography, writing-plans, git-worktrees, verification |
 | fixer | GPT-5.3-codex (low) | systematic-debugging, context7-driven-dev |
 | designer | GPT-5.4 (medium) | visual-explainer, agent-browser |
 | librarian | MiniMax M2.5 Free (Kilo, low) | context7-base-code-review, cartography, visual-explainer |
@@ -47,7 +47,7 @@ These are the orchestrator-level agents that manage the workflow:
 ## Providers I'm Using
 
 - **Kilo** - OpenCode's gateway to free models (MiniMax M2.5 Free)
-- **Cline** - Free tier with GLM-5 Free, MiniMax, and KAT Coder Pro
+- **Cline** - Free tier with MiniMax M2.5 Free, MiniMax, and KAT Coder Pro
 - **Modal** - GLM-5-FP8, a 744B parameter model
 - **OpenAI** - GPT-5.4, GPT-5.3-codex, GPT-5.3-codex-spark (business plan)
 - **Kimi** - Moonshot's kimi-k2.5 for orchestration fallback
@@ -58,12 +58,12 @@ When a model times out (15s) or fails, it tries the next one in line:
 
 | Agent | Fallback Order |
 |-------|----------------|
-| oracle | GPT-5.4 → GLM-5 Free → kimi-k2.5 → GPT-5.3-codex → MiniMax M2.5 Free → GPT-5.3-codex-spark |
-| orchestrator | GLM-5 Free → kimi-k2.5 → GPT-5.4 → MiniMax M2.5 Free → GPT-5.3-codex → GPT-5.3-codex-spark |
-| fixer | GPT-5.3-codex → GPT-5.3-codex-spark → kimi-k2.5 → GPT-5.4 → GLM-5 Free → MiniMax M2.5 Free |
-| designer | GPT-5.4 → MiniMax M2.5 Free → GLM-5 Free → kimi-k2.5 → GPT-5.3-codex → GPT-5.3-codex-spark |
-| librarian | MiniMax M2.5 Free → GPT-5.4 → GLM-5 Free → kimi-k2.5 → GPT-5.3-codex → GPT-5.3-codex-spark |
-| explorer | MiniMax M2.5 Free (Kilo) → GPT-5.3-codex → GPT-5.3-codex-spark → kimi-k2.5 → MiniMax M2.5 Free → GLM-5 Free → GPT-5.4 |
+| oracle | GPT-5.4 → MiniMax M2.5 Free → kimi-k2.5 → GPT-5.3-codex → MiniMax M2.5 Free → GPT-5.3-codex-spark |
+| orchestrator | MiniMax M2.5 Free → kimi-k2.5 → GPT-5.4 → MiniMax M2.5 Free → GPT-5.3-codex → GPT-5.3-codex-spark |
+| fixer | GPT-5.3-codex → GPT-5.3-codex-spark → kimi-k2.5 → GPT-5.4 → MiniMax M2.5 Free → MiniMax M2.5 Free |
+| designer | GPT-5.4 → MiniMax M2.5 Free → MiniMax M2.5 Free → kimi-k2.5 → GPT-5.3-codex → GPT-5.3-codex-spark |
+| librarian | MiniMax M2.5 Free → GPT-5.4 → MiniMax M2.5 Free → kimi-k2.5 → GPT-5.3-codex → GPT-5.3-codex-spark |
+| explorer | MiniMax M2.5 Free (Kilo) → GPT-5.3-codex → GPT-5.3-codex-spark → kimi-k2.5 → MiniMax M2.5 Free → MiniMax M2.5 Free → GPT-5.4 |
 | refactor-cleaner | MiniMax M2.5 Free (Kilo) → MiniMax M2.5 Free (Cline) |
 
 Explorer and refactor-cleaner start with free models since they run frequently for file searches and cleanup tasks.
