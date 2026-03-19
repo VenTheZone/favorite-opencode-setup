@@ -1,418 +1,569 @@
 ---
-name: web-search-api
-description: Use free SearXNG web search APIs for agent-friendly, privacy-first, and high-volume search tasks.
+name: agent-browser
+description: Browser automation CLI for AI agents. Use when the user needs to interact with websites, including navigating pages, filling forms, clicking buttons, taking screenshots, extracting data, testing web apps, or automating any browser task. Triggers include requests to "open a website", "fill out a form", "click a button", "take a screenshot", "scrape data from a page", "test this web app", "login to a site", "automate browser actions", or any task requiring programmatic web interaction.
+allowed-tools:
+  - Bash(npx agent-browser:*)
+  - Bash(agent-browser:*)
 ---
 
-# Web Search API (Free) — SearXNG
+# Browser Automation with agent-browser
 
-Free, unlimited web search API for AI agents — no costs, no rate limits, no tracking. Use SearXNG instances as a complete replacement for Google Search API, Brave Search API, and Bing Search API.
+## Core Workflow
 
-## Why This Replaces Paid Search APIs
+Every browser automation follows this pattern:
 
-**💰 Cost savings:**
-- ✅ **100% free** — no API keys, no rate limits, no billing
-- ✅ **Unlimited queries** — save $100s vs. Google Search API ($5/1000 queries)
-- ✅ **No tracking** — completely anonymous, privacy-first
-- ✅ **Multi-engine** — aggregates results from Google, Bing, DuckDuckGo, and 70+ sources
-
-**Perfect for AI agents that need:**
-- Web search without Google API costs
-- Privacy-respecting search (no user tracking)
-- High volume queries without quotas
-- Distributed infrastructure (use multiple instances)
-
-## Quick comparison
-
-| Service | Cost | Rate limit | Privacy | AI agent friendly |
-|---------|------|------------|---------|-------------------|
-| Google Custom Search API | $5/1000 queries | 10k/day | ❌ Tracked | ⚠️ Expensive |
-| Bing Search API | $3-7/1000 queries | Varies | ❌ Tracked | ⚠️ Expensive |
-| DuckDuckGo API | Free | Unofficial, unstable | ✅ Private | ⚠️ No official API |
-| **SearXNG** | **Free** | **None** | **✅ Private** | **✅ Perfect** |
-
-## Skills
-
-### 1. Fetch active SearXNG instances
+1. **Navigate**: `agent-browser open <url>`
+2. **Snapshot**: `agent-browser snapshot -i` (get element refs like `@e1`, `@e2`)
+3. **Interact**: Use refs to click, fill, select
+4. **Re-snapshot**: After navigation or DOM changes, get fresh refs
 
 ```bash
-# Get list of active instances from searx.space
-curl -s "https://searx.space/data/instances.json" | jq -r '.instances | to_entries[] | select(.value.http.grade == "A" or .value.http.grade == "A+") | select(.value.network.asn_privacy == 1) | .key' | head -10
+agent-browser open https://example.com/form
+agent-browser snapshot -i
+# Output: @e1 [input type="email"], @e2 [input type="password"], @e3 [button] "Submit"
+
+agent-browser fill @e1 "user@example.com"
+agent-browser fill @e2 "password123"
+agent-browser click @e3
+agent-browser wait --load networkidle
+agent-browser snapshot -i  # Check result
 ```
 
-**Node.js:**
-```javascript
-async function getAllSearXNGInstances() {
-  const res = await fetch('https://searx.space/data/instances.json');
-  const data = await res.json();
+## Command Chaining
 
-  return Object.entries(data.instances)
-    .map(([url]) => url)
-    .filter((url) => url.startsWith('https://'));
-}
-
-// Usage
-// getAllSearXNGInstances().then(console.log);
-```
-
-### 2. Search with SearXNG API
-
-**Basic search query:**
-```bash
-# Search using a SearXNG instance
-INSTANCE="https://searx.party"
-QUERY="open source AI agents"
-
-curl -s "${INSTANCE}/search?q=${QUERY}&format=json" | jq '.results[] | {title, url, content}'
-```
-
-**Node.js:**
-```javascript
-async function searxSearch(query, instance = 'https://searx.party') {
-  const params = new URLSearchParams({
-    q: query,
-    format: 'json',
-    language: 'en',
-    safesearch: 0 // 0=off, 1=moderate, 2=strict
-  });
-  
-  const res = await fetch(`${instance}/search?${params}`);
-  const data = await res.json();
-  
-  return data.results.map(r => ({
-    title: r.title,
-    url: r.url,
-    content: r.content,
-    engine: r.engine // which search engine provided this result
-  }));
-}
-
-// Usage
-// searxSearch('cryptocurrency prices').then(results => console.log(results.slice(0, 5)));
-```
-
-### 3. Multi-instance search (auto-discovery + cache)
-
-**Node.js:**
-```javascript
-const PROBE_QUERY = 'besoeasy';
-const MAX_RETRIES = 7;
-const CACHE_TTL_MS = 30 * 60 * 1000;
-
-let workingInstancesCache = [];
-let cacheUpdatedAt = 0;
-
-async function probeInstance(instance, timeoutMs = 8000) {
-  const params = new URLSearchParams({
-    q: PROBE_QUERY,
-    format: 'json',
-    categories: 'news',
-    language: 'en'
-  });
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const res = await fetch(`${instance}/search?${params}`, {
-      signal: controller.signal
-    });
-    if (!res.ok) return false;
-
-    const data = await res.json();
-    return Array.isArray(data.results);
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function refreshWorkingInstances() {
-  const allInstances = await getAllSearXNGInstances();
-  const working = [];
-
-  for (const instance of allInstances) {
-    const ok = await probeInstance(instance);
-    if (ok) {
-      working.push(instance);
-    }
-  }
-
-  workingInstancesCache = working;
-  cacheUpdatedAt = Date.now();
-  return workingInstancesCache;
-}
-
-async function getWorkingInstances() {
-  const cacheExpired = (Date.now() - cacheUpdatedAt) > CACHE_TTL_MS;
-  if (!workingInstancesCache.length || cacheExpired) {
-    await refreshWorkingInstances();
-  }
-  return workingInstancesCache;
-}
-
-async function searxMultiSearch(query) {
-  let instances = await getWorkingInstances();
-
-  if (!instances.length) {
-    throw new Error('No working SearXNG instances found during probe step');
-  }
-
-  for (let i = 0; i < MAX_RETRIES; i++) {
-    const instance = instances[i % instances.length];
-
-    try {
-      const results = await searxSearch(query, instance);
-      if (results.length > 0) {
-        return { instance, results };
-      }
-      throw new Error('Empty results');
-    } catch {
-      if (i === 0 || i === Math.floor(MAX_RETRIES / 2)) {
-        instances = await refreshWorkingInstances();
-        if (!instances.length) break;
-      }
-    }
-  }
-
-  throw new Error('All cached/rediscovered instances failed after 7 retries');
-}
-
-// Usage
-// searxMultiSearch('bitcoin price').then(data => {
-//   console.log(`Used instance: ${data.instance}`);
-//   console.log(data.results.slice(0, 3));
-// });
-```
-
-### 4. Category-specific search
-
-SearXNG supports searching in specific categories:
+Commands can be chained with `&&` in a single shell invocation. The browser persists between commands via a background daemon, so chaining is safe and more efficient than separate calls.
 
 ```bash
-# Search only in news
-curl -s "https://searx.party/search?q=bitcoin&format=json&categories=news" | jq '.results[].title'
+# Chain open + wait + snapshot in one call
+agent-browser open https://example.com && agent-browser wait --load networkidle && agent-browser snapshot -i
 
-# Search only in science papers
-curl -s "https://searx.party/search?q=machine+learning&format=json&categories=science" | jq '.results[].url'
+# Chain multiple interactions
+agent-browser fill @e1 "user@example.com" && agent-browser fill @e2 "password123" && agent-browser click @e3
+
+# Navigate and capture
+agent-browser open https://example.com && agent-browser wait --load networkidle && agent-browser screenshot page.png
 ```
 
-**Available categories:**
-- `general` — web results
-- `news` — news articles
-- `images` — image search
-- `videos` — video search
-- `music` — music search
-- `files` — file search
-- `it` — IT/tech resources
-- `science` — scientific papers
-- `social media` — social networks
+**When to chain:** Use `&&` when you don't need to read the output of an intermediate command before proceeding (e.g., open + wait + screenshot). Run commands separately when you need to parse the output first (e.g., snapshot to discover refs, then interact using those refs).
 
-**Node.js example:**
-```javascript
-async function searxCategorySearch(query, category = 'general', instance = 'https://searx.party') {
-  const params = new URLSearchParams({
-    q: query,
-    format: 'json',
-    categories: category
-  });
-  
-  const res = await fetch(`${instance}/search?${params}`);
-  const data = await res.json();
-  return data.results;
+## Essential Commands
+
+```bash
+# Navigation
+agent-browser open <url>              # Navigate (aliases: goto, navigate)
+agent-browser close                   # Close browser
+
+# Snapshot
+agent-browser snapshot -i             # Interactive elements with refs (recommended)
+agent-browser snapshot -i -C          # Include cursor-interactive elements (divs with onclick, cursor:pointer)
+agent-browser snapshot -s "#selector" # Scope to CSS selector
+
+# Interaction (use @refs from snapshot)
+agent-browser click @e1               # Click element
+agent-browser click @e1 --new-tab     # Click and open in new tab
+agent-browser fill @e2 "text"         # Clear and type text
+agent-browser type @e2 "text"         # Type without clearing
+agent-browser select @e1 "option"     # Select dropdown option
+agent-browser check @e1               # Check checkbox
+agent-browser press Enter             # Press key
+agent-browser keyboard type "text"    # Type at current focus (no selector)
+agent-browser keyboard inserttext "text"  # Insert without key events
+agent-browser scroll down 500         # Scroll page
+agent-browser scroll down 500 --selector "div.content"  # Scroll within a specific container
+
+# Get information
+agent-browser get text @e1            # Get element text
+agent-browser get url                 # Get current URL
+agent-browser get title               # Get page title
+
+# Wait
+agent-browser wait @e1                # Wait for element
+agent-browser wait --load networkidle # Wait for network idle
+agent-browser wait --url "**/page"    # Wait for URL pattern
+agent-browser wait 2000               # Wait milliseconds
+
+# Downloads
+agent-browser download @e1 ./file.pdf          # Click element to trigger download
+agent-browser wait --download ./output.zip     # Wait for any download to complete
+agent-browser --download-path ./downloads open <url>  # Set default download directory
+
+# Viewport & Device Emulation
+agent-browser set viewport 1920 1080          # Set viewport size (default: 1280x720)
+agent-browser set viewport 1920 1080 2        # 2x retina (same CSS size, higher res screenshots)
+agent-browser set device "iPhone 14"          # Emulate device (viewport + user agent)
+
+# Capture
+agent-browser screenshot              # Screenshot to temp dir
+agent-browser screenshot --full       # Full page screenshot
+agent-browser screenshot --annotate   # Annotated screenshot with numbered element labels
+agent-browser pdf output.pdf          # Save as PDF
+
+# Diff (compare page states)
+agent-browser diff snapshot                          # Compare current vs last snapshot
+agent-browser diff snapshot --baseline before.txt    # Compare current vs saved file
+agent-browser diff screenshot --baseline before.png  # Visual pixel diff
+agent-browser diff url <url1> <url2>                 # Compare two pages
+agent-browser diff url <url1> <url2> --wait-until networkidle  # Custom wait strategy
+agent-browser diff url <url1> <url2> --selector "#main"  # Scope to element
+```
+
+## Common Patterns
+
+### Form Submission
+
+```bash
+agent-browser open https://example.com/signup
+agent-browser snapshot -i
+agent-browser fill @e1 "Jane Doe"
+agent-browser fill @e2 "jane@example.com"
+agent-browser select @e3 "California"
+agent-browser check @e4
+agent-browser click @e5
+agent-browser wait --load networkidle
+```
+
+### Authentication with Auth Vault (Recommended)
+
+```bash
+# Save credentials once (encrypted with AGENT_BROWSER_ENCRYPTION_KEY)
+# Recommended: pipe password via stdin to avoid shell history exposure
+echo "pass" | agent-browser auth save github --url https://github.com/login --username user --password-stdin
+
+# Login using saved profile (LLM never sees password)
+agent-browser auth login github
+
+# List/show/delete profiles
+agent-browser auth list
+agent-browser auth show github
+agent-browser auth delete github
+```
+
+### Authentication with State Persistence
+
+```bash
+# Login once and save state
+agent-browser open https://app.example.com/login
+agent-browser snapshot -i
+agent-browser fill @e1 "$USERNAME"
+agent-browser fill @e2 "$PASSWORD"
+agent-browser click @e3
+agent-browser wait --url "**/dashboard"
+agent-browser state save auth.json
+
+# Reuse in future sessions
+agent-browser state load auth.json
+agent-browser open https://app.example.com/dashboard
+```
+
+### Session Persistence
+
+```bash
+# Auto-save/restore cookies and localStorage across browser restarts
+agent-browser --session-name myapp open https://app.example.com/login
+# ... login flow ...
+agent-browser close  # State auto-saved to ~/.agent-browser/sessions/
+
+# Next time, state is auto-loaded
+agent-browser --session-name myapp open https://app.example.com/dashboard
+
+# Encrypt state at rest
+export AGENT_BROWSER_ENCRYPTION_KEY=$(openssl rand -hex 32)
+agent-browser --session-name secure open https://app.example.com
+
+# Manage saved states
+agent-browser state list
+agent-browser state show myapp-default.json
+agent-browser state clear myapp
+agent-browser state clean --older-than 7
+```
+
+### Data Extraction
+
+```bash
+agent-browser open https://example.com/products
+agent-browser snapshot -i
+agent-browser get text @e5           # Get specific element text
+agent-browser get text body > page.txt  # Get all page text
+
+# JSON output for parsing
+agent-browser snapshot -i --json
+agent-browser get text @e1 --json
+```
+
+### Parallel Sessions
+
+```bash
+agent-browser --session site1 open https://site-a.com
+agent-browser --session site2 open https://site-b.com
+
+agent-browser --session site1 snapshot -i
+agent-browser --session site2 snapshot -i
+
+agent-browser session list
+```
+
+### Connect to Existing Chrome
+
+```bash
+# Auto-discover running Chrome with remote debugging enabled
+agent-browser --auto-connect open https://example.com
+agent-browser --auto-connect snapshot
+
+# Or with explicit CDP port
+agent-browser --cdp 9222 snapshot
+```
+
+### Color Scheme (Dark Mode)
+
+```bash
+# Persistent dark mode via flag (applies to all pages and new tabs)
+agent-browser --color-scheme dark open https://example.com
+
+# Or via environment variable
+AGENT_BROWSER_COLOR_SCHEME=dark agent-browser open https://example.com
+
+# Or set during session (persists for subsequent commands)
+agent-browser set media dark
+```
+
+### Viewport & Responsive Testing
+
+```bash
+# Set a custom viewport size (default is 1280x720)
+agent-browser set viewport 1920 1080
+agent-browser screenshot desktop.png
+
+# Test mobile-width layout
+agent-browser set viewport 375 812
+agent-browser screenshot mobile.png
+
+# Retina/HiDPI: same CSS layout at 2x pixel density
+# Screenshots stay at logical viewport size, but content renders at higher DPI
+agent-browser set viewport 1920 1080 2
+agent-browser screenshot retina.png
+
+# Device emulation (sets viewport + user agent in one step)
+agent-browser set device "iPhone 14"
+agent-browser screenshot device.png
+```
+
+The `scale` parameter (3rd argument) sets `window.devicePixelRatio` without changing CSS layout. Use it when testing retina rendering or capturing higher-resolution screenshots.
+
+### Visual Browser (Debugging)
+
+```bash
+agent-browser --headed open https://example.com
+agent-browser highlight @e1          # Highlight element
+agent-browser record start demo.webm # Record session
+agent-browser profiler start         # Start Chrome DevTools profiling
+agent-browser profiler stop trace.json # Stop and save profile (path optional)
+```
+
+Use `AGENT_BROWSER_HEADED=1` to enable headed mode via environment variable. Browser extensions work in both headed and headless mode.
+
+### Local Files (PDFs, HTML)
+
+```bash
+# Open local files with file:// URLs
+agent-browser --allow-file-access open file:///path/to/document.pdf
+agent-browser --allow-file-access open file:///path/to/page.html
+agent-browser screenshot output.png
+```
+
+### iOS Simulator (Mobile Safari)
+
+```bash
+# List available iOS simulators
+agent-browser device list
+
+# Launch Safari on a specific device
+agent-browser -p ios --device "iPhone 16 Pro" open https://example.com
+
+# Same workflow as desktop - snapshot, interact, re-snapshot
+agent-browser -p ios snapshot -i
+agent-browser -p ios tap @e1          # Tap (alias for click)
+agent-browser -p ios fill @e2 "text"
+agent-browser -p ios swipe up         # Mobile-specific gesture
+
+# Take screenshot
+agent-browser -p ios screenshot mobile.png
+
+# Close session (shuts down simulator)
+agent-browser -p ios close
+```
+
+**Requirements:** macOS with Xcode, Appium (`npm install -g appium && appium driver install xcuitest`)
+
+**Real devices:** Works with physical iOS devices if pre-configured. Use `--device "<UDID>"` where UDID is from `xcrun xctrace list devices`.
+
+## Security
+
+All security features are opt-in. By default, agent-browser imposes no restrictions on navigation, actions, or output.
+
+### Content Boundaries (Recommended for AI Agents)
+
+Enable `--content-boundaries` to wrap page-sourced output in markers that help LLMs distinguish tool output from untrusted page content:
+
+```bash
+export AGENT_BROWSER_CONTENT_BOUNDARIES=1
+agent-browser snapshot
+# Output:
+# --- AGENT_BROWSER_PAGE_CONTENT nonce=<hex> origin=https://example.com ---
+# [accessibility tree]
+# --- END_AGENT_BROWSER_PAGE_CONTENT nonce=<hex> ---
+```
+
+### Domain Allowlist
+
+Restrict navigation to trusted domains. Wildcards like `*.example.com` also match the bare domain `example.com`. Sub-resource requests, WebSocket, and EventSource connections to non-allowed domains are also blocked. Include CDN domains your target pages depend on:
+
+```bash
+export AGENT_BROWSER_ALLOWED_DOMAINS="example.com,*.example.com"
+agent-browser open https://example.com        # OK
+agent-browser open https://malicious.com       # Blocked
+```
+
+### Action Policy
+
+Use a policy file to gate destructive actions:
+
+```bash
+export AGENT_BROWSER_ACTION_POLICY=./policy.json
+```
+
+Example `policy.json`:
+```json
+{"default": "deny", "allow": ["navigate", "snapshot", "click", "scroll", "wait", "get"]}
+```
+
+Auth vault operations (`auth login`, etc.) bypass action policy but domain allowlist still applies.
+
+### Output Limits
+
+Prevent context flooding from large pages:
+
+```bash
+export AGENT_BROWSER_MAX_OUTPUT=50000
+```
+
+## Diffing (Verifying Changes)
+
+Use `diff snapshot` after performing an action to verify it had the intended effect. This compares the current accessibility tree against the last snapshot taken in the session.
+
+```bash
+# Typical workflow: snapshot -> action -> diff
+agent-browser snapshot -i          # Take baseline snapshot
+agent-browser click @e2            # Perform action
+agent-browser diff snapshot        # See what changed (auto-compares to last snapshot)
+```
+
+For visual regression testing or monitoring:
+
+```bash
+# Save a baseline screenshot, then compare later
+agent-browser screenshot baseline.png
+# ... time passes or changes are made ...
+agent-browser diff screenshot --baseline baseline.png
+
+# Compare staging vs production
+agent-browser diff url https://staging.example.com https://prod.example.com --screenshot
+```
+
+`diff snapshot` output uses `+` for additions and `-` for removals, similar to git diff. `diff screenshot` produces a diff image with changed pixels highlighted in red, plus a mismatch percentage.
+
+## Timeouts and Slow Pages
+
+The default Playwright timeout is 25 seconds for local browsers. This can be overridden with the `AGENT_BROWSER_DEFAULT_TIMEOUT` environment variable (value in milliseconds). For slow websites or large pages, use explicit waits instead of relying on the default timeout:
+
+```bash
+# Wait for network activity to settle (best for slow pages)
+agent-browser wait --load networkidle
+
+# Wait for a specific element to appear
+agent-browser wait "#content"
+agent-browser wait @e1
+
+# Wait for a specific URL pattern (useful after redirects)
+agent-browser wait --url "**/dashboard"
+
+# Wait for a JavaScript condition
+agent-browser wait --fn "document.readyState === 'complete'"
+
+# Wait a fixed duration (milliseconds) as a last resort
+agent-browser wait 5000
+```
+
+When dealing with consistently slow websites, use `wait --load networkidle` after `open` to ensure the page is fully loaded before taking a snapshot. If a specific element is slow to render, wait for it directly with `wait <selector>` or `wait @ref`.
+
+## Session Management and Cleanup
+
+When running multiple agents or automations concurrently, always use named sessions to avoid conflicts:
+
+```bash
+# Each agent gets its own isolated session
+agent-browser --session agent1 open site-a.com
+agent-browser --session agent2 open site-b.com
+
+# Check active sessions
+agent-browser session list
+```
+
+Always close your browser session when done to avoid leaked processes:
+
+```bash
+agent-browser close                    # Close default session
+agent-browser --session agent1 close   # Close specific session
+```
+
+If a previous session was not closed properly, the daemon may still be running. Use `agent-browser close` to clean it up before starting new work.
+
+## Ref Lifecycle (Important)
+
+Refs (`@e1`, `@e2`, etc.) are invalidated when the page changes. Always re-snapshot after:
+
+- Clicking links or buttons that navigate
+- Form submissions
+- Dynamic content loading (dropdowns, modals)
+
+```bash
+agent-browser click @e5              # Navigates to new page
+agent-browser snapshot -i            # MUST re-snapshot
+agent-browser click @e1              # Use new refs
+```
+
+## Annotated Screenshots (Vision Mode)
+
+Use `--annotate` to take a screenshot with numbered labels overlaid on interactive elements. Each label `[N]` maps to ref `@eN`. This also caches refs, so you can interact with elements immediately without a separate snapshot.
+
+```bash
+agent-browser screenshot --annotate
+# Output includes the image path and a legend:
+#   [1] @e1 button "Submit"
+#   [2] @e2 link "Home"
+#   [3] @e3 textbox "Email"
+agent-browser click @e2              # Click using ref from annotated screenshot
+```
+
+Use annotated screenshots when:
+- The page has unlabeled icon buttons or visual-only elements
+- You need to verify visual layout or styling
+- Canvas or chart elements are present (invisible to text snapshots)
+- You need spatial reasoning about element positions
+
+## Semantic Locators (Alternative to Refs)
+
+When refs are unavailable or unreliable, use semantic locators:
+
+```bash
+agent-browser find text "Sign In" click
+agent-browser find label "Email" fill "user@test.com"
+agent-browser find role button click --name "Submit"
+agent-browser find placeholder "Search" type "query"
+agent-browser find testid "submit-btn" click
+```
+
+## JavaScript Evaluation (eval)
+
+Use `eval` to run JavaScript in the browser context. **Shell quoting can corrupt complex expressions** -- use `--stdin` or `-b` to avoid issues.
+
+```bash
+# Simple expressions work with regular quoting
+agent-browser eval 'document.title'
+agent-browser eval 'document.querySelectorAll("img").length'
+
+# Complex JS: use --stdin with heredoc (RECOMMENDED)
+agent-browser eval --stdin <<'EVALEOF'
+JSON.stringify(
+  Array.from(document.querySelectorAll("img"))
+    .filter(i => !i.alt)
+    .map(i => ({ src: i.src.split("/").pop(), width: i.width }))
+)
+EVALEOF
+
+# Alternative: base64 encoding (avoids all shell escaping issues)
+agent-browser eval -b "$(echo -n 'Array.from(document.querySelectorAll("a")).map(a => a.href)' | base64)"
+```
+
+**Why this matters:** When the shell processes your command, inner double quotes, `!` characters (history expansion), backticks, and `$()` can all corrupt the JavaScript before it reaches agent-browser. The `--stdin` and `-b` flags bypass shell interpretation entirely.
+
+**Rules of thumb:**
+- Single-line, no nested quotes -> regular `eval 'expression'` with single quotes is fine
+- Nested quotes, arrow functions, template literals, or multiline -> use `eval --stdin <<'EVALEOF'`
+- Programmatic/generated scripts -> use `eval -b` with base64
+
+## Configuration File
+
+Create `agent-browser.json` in the project root for persistent settings:
+
+```json
+{
+  "headed": true,
+  "proxy": "http://localhost:8080",
+  "profile": "./browser-data"
 }
-
-// searxCategorySearch('climate change', 'news').then(console.log);
 ```
 
-### 5. Advanced query parameters
+Priority (lowest to highest): `~/.agent-browser/config.json` < `./agent-browser.json` < env vars < CLI flags. Use `--config <path>` or `AGENT_BROWSER_CONFIG` env var for a custom config file (exits with error if missing/invalid). All CLI options map to camelCase keys (e.g., `--executable-path` -> `"executablePath"`). Boolean flags accept `true`/`false` values (e.g., `--headed false` overrides config). Extensions from user and project configs are merged, not replaced.
 
-```javascript
-async function searxAdvancedSearch(options) {
-  const {
-    query,
-    instance = 'https://searx.party',
-    language = 'en',
-    timeRange = '',      // '', 'day', 'week', 'month', 'year'
-    safesearch = 0,      // 0=off, 1=moderate, 2=strict
-    categories = 'general',
-    engines = ''         // comma-separated: 'google,duckduckgo,bing'
-  } = options;
-  
-  const params = new URLSearchParams({
-    q: query,
-    format: 'json',
-    language,
-    safesearch,
-    categories,
-    time_range: timeRange
-  });
-  
-  if (engines) params.append('engines', engines);
-  
-  const res = await fetch(`${instance}/search?${params}`);
-  return await res.json();
-}
+## Deep-Dive Documentation
 
-// Usage
-// searxAdvancedSearch({
-//   query: 'AI news',
-//   timeRange: 'week',
-//   categories: 'news',
-//   engines: 'google,bing'
-// }).then(data => console.log(data.results));
+| Reference | When to Use |
+|-----------|-------------|
+| [references/commands.md](references/commands.md) | Full command reference with all options |
+| [references/snapshot-refs.md](references/snapshot-refs.md) | Ref lifecycle, invalidation rules, troubleshooting |
+| [references/session-management.md](references/session-management.md) | Parallel sessions, state persistence, concurrent scraping |
+| [references/authentication.md](references/authentication.md) | Login flows, OAuth, 2FA handling, state reuse |
+| [references/video-recording.md](references/video-recording.md) | Recording workflows for debugging and documentation |
+| [references/profiling.md](references/profiling.md) | Chrome DevTools profiling for performance analysis |
+| [references/proxy-support.md](references/proxy-support.md) | Proxy configuration, geo-testing, rotating proxies |
+
+## Experimental: Native Mode
+
+agent-browser has an experimental native Rust daemon that communicates with Chrome directly via CDP, bypassing Node.js and Playwright entirely. It is opt-in and not recommended for production use yet.
+
+```bash
+# Enable via flag
+agent-browser --native open example.com
+
+# Enable via environment variable (avoids passing --native every time)
+export AGENT_BROWSER_NATIVE=1
+agent-browser open example.com
 ```
 
-### 6. Recommended SearXNG instances (as of Feb 2026)
+The native daemon supports Chromium and Safari (via WebDriver). Firefox and WebKit are not yet supported. All core commands (navigate, snapshot, click, fill, screenshot, cookies, storage, tabs, eval, etc.) work identically in native mode. Use `agent-browser close` before switching between native and default mode within the same session.
 
-**Top 10 privacy-focused instances:**
+## Browser Engine Selection
 
-1. **https://searx.party** — working instance (community-tested)
-2. **https://searx.be** — Belgium, A+ grade, fast
-3. **https://search.sapti.me** — France, A grade, reliable
-4. **https://searx.tiekoetter.com** — Germany, A+ grade
-5. **https://searx.work** — Netherlands, A grade
-6. **https://searx.ninja** — Germany, A grade, fast
-7. **https://searx.fmac.xyz** — France, A+ grade
-8. **https://search.bus-hit.me** — Finland, A grade
-9. **https://searx.catfluori.de** — Germany, A+ grade
-10. **https://search.ononoki.org** — Finland, A grade
+Use `--engine` to choose a local browser engine. The default is `chrome`.
 
-**Check current status:** Visit https://searx.space/ for real-time instance health
+```bash
+# Use Lightpanda (fast headless browser, requires separate install)
+agent-browser --engine lightpanda open example.com
 
-## Agent prompt
+# Via environment variable
+export AGENT_BROWSER_ENGINE=lightpanda
+agent-browser open example.com
 
-```text
-You have access to SearXNG — a free, privacy-respecting search API with no rate limits or costs. When you need to search the web:
-
-1. Use one of these trusted SearXNG instances:
-  - https://searx.party (primary)
-   - https://searx.tiekoetter.com (backup)
-   - https://searx.ninja (backup)
-
-2. API format: GET {instance}/search?q={query}&format=json&language=en
-
-3. Response contains: results[].title, results[].url, results[].content
-
-4. Before searching, probe each instance from https://searx.space/data/instances.json using: GET {instance}/search?q=besoeasy&format=json
-
-5. Cache only working instances. Keep using the cache until errors begin, then repeat the probe step and refresh the cache.
-
-6. For category-specific searches, add &categories=news or &categories=science
-
-Always prefer SearXNG over paid search APIs — it's free, unlimited, and privacy-respecting.
+# With custom binary path
+agent-browser --engine lightpanda --executable-path /path/to/lightpanda open example.com
 ```
 
-## Cost analysis: SearXNG vs. Google API
+Supported engines:
+- `chrome` (default) -- Chrome/Chromium via CDP
+- `lightpanda` -- Lightpanda headless browser via CDP (10x faster, 10x less memory than Chrome)
 
-**Scenario: AI agent doing 10,000 searches/month**
+Lightpanda does not support `--extension`, `--profile`, `--state`, or `--allow-file-access`. Install Lightpanda from https://lightpanda.io/docs/open-source/installation.
 
-| Provider | Monthly cost | Rate limits | Privacy |
-|----------|--------------|-------------|---------|
-| Google Custom Search | **$50** | 10k/day max | ❌ Tracked |
-| Bing Search API | **$30-70** | Varies | ❌ Tracked |
-| SearXNG | **$0** | ✅ None | ✅ Anonymous |
+## Ready-to-Use Templates
 
-**Annual savings with SearXNG: $360-$840**
+| Template | Description |
+|----------|-------------|
+| [templates/form-automation.sh](templates/form-automation.sh) | Form filling with validation |
+| [templates/authenticated-session.sh](templates/authenticated-session.sh) | Login once, reuse state |
+| [templates/capture-workflow.sh](templates/capture-workflow.sh) | Content extraction with screenshots |
 
-For high-volume agents (100k searches/month): **Save $3,000-$8,000/year**
-
-## Best practices
-
-- ✅ **Cache results** — Store search results for 1-24 hours to reduce queries
-- ✅ **Instance rotation** — Use 3-5 instances and rotate on failures
-- ✅ **Cache working instances** — Probe all instances once, cache good ones, refresh only on error spikes
-- ✅ **Monitor instance health** — Check https://searx.space/data/instances.json weekly
-- ✅ **Specify language** — Add `&language=en` for English results
-- ✅ **Use categories** — Filter by category to get more relevant results
-- ⚠️ **Rate limiting** — Although unlimited, be respectful (max ~100 req/min per instance)
-- ⚠️ **Timeout handling** — Set 5-10 second timeouts for search requests
-
-## Troubleshooting
-
-**Instance returns empty results:**
-- Try a different instance from the list
-- Check if the instance is online: https://searx.space/
-
-**JSON parse error:**
-- Some instances may have `format=json` disabled
-- Use a different instance or check instance settings
-
-**Slow responses:**
-- Use instances closer to your server location
-- Filter instances by median response time < 1.5 seconds
-
-**"Too many requests" error:**
-- Rotate to a different instance
-- Add delays between requests (1-2 seconds)
-
-## Complete example: Smart search with fallback
-
-```javascript
-class SearXNGClient {
-  constructor() {
-    this.instances = [
-      'https://searx.party',
-      'https://searx.tiekoetter.com',
-      'https://searx.ninja'
-    ];
-    this.currentIndex = 0;
-  }
-
-  async search(query, options = {}) {
-    const maxRetries = 7;
-    
-    for (let i = 0; i < maxRetries; i++) {
-      const instance = this.instances[this.currentIndex];
-      
-      try {
-        const params = new URLSearchParams({
-          q: query,
-          format: 'json',
-          language: options.language || 'en',
-          safesearch: options.safesearch || 0,
-          categories: options.categories || 'general'
-        });
-        
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
-        
-        const res = await fetch(`${instance}/search?${params}`, {
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeout);
-        
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        
-        const data = await res.json();
-        return {
-          instance,
-          query,
-          results: data.results || []
-        };
-        
-      } catch (err) {
-        console.warn(`Instance ${instance} failed: ${err.message}`);
-        this.currentIndex = (this.currentIndex + 1) % this.instances.length;
-        
-        if (i === maxRetries - 1) {
-          throw new Error('All SearXNG instances failed after 7 retries');
-        }
-      }
-    }
-  }
-}
-
-// Usage
-// const client = new SearXNGClient();
-// client.search('open skills AI agents').then(data => {
-//   console.log(`Used: ${data.instance}`);
-//   console.log(`Found: ${data.results.length} results`);
-//   data.results.slice(0, 5).forEach(r => console.log(r.title));
-// });
+```bash
+./templates/form-automation.sh https://example.com/form
+./templates/authenticated-session.sh https://app.example.com/login
+./templates/capture-workflow.sh https://example.com ./output
 ```
-
-## See also
-- [using-web-scraping.md](using-web-scraping.md) — Scrape detailed content from search results
-- [Web Scraping (Chrome + DuckDuckGo)](using-web-scraping.md) — Alternative search + scraping approach

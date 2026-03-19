@@ -32,188 +32,6 @@
     "rtk"
   ],
   "agent": {
-    "planner": {
-      "description": "Expert planning specialist for complex features and refactoring. Use for implementation planning, architectural changes, or complex refactoring.",
-      "model": "cline/minimax-m2.5-free",
-      "mode": "subagent",
-      "prompt": "{file:./prompts/agents/planner.txt}",
-      "tools": {
-        "read": true,
-        "bash": true,
-        "write": false,
-        "edit": false
-      }
-    },
-    "architect": {
-      "description": "Software architecture specialist for system design, scalability, and technical decision-making. 744B parameters, 200K context, SOTA on SWE-bench.",
-      "model": "modal/zai-org/GLM-5-FP8",
-      "mode": "subagent",
-      "prompt": "{file:./prompts/agents/architect.txt}",
-      "tools": {
-        "read": true,
-        "bash": true,
-        "write": false,
-        "edit": false
-      }
-    },
-    "brainstormer": {
-      "model": "kilo/minimax/minimax-m2.5-free"
-    },
-    "code-reviewer": {
-      "description": "Expert code review specialist. Reviews code for quality, security, and maintainability. Use immediately after writing or modifying code.",
-      "model": "openai/gpt-5.4",
-      "thinking": "high",
-      "mode": "subagent",
-      "prompt": "{file:./prompts/agents/code-reviewer.txt}",
-      "tools": {
-        "read": true,
-        "bash": true,
-        "write": false,
-        "edit": false
-      }
-    },
-    "security-reviewer": {
-      "description": "Security vulnerability detection and remediation specialist. Use after writing code that handles user input, authentication, API endpoints, or sensitive data.",
-      "model": "openai/gpt-5.4",
-      "thinking": "high",
-      "mode": "subagent",
-      "prompt": "{file:./prompts/agents/security-reviewer.txt}",
-      "tools": {
-        "read": true,
-        "bash": true,
-        "write": true,
-        "edit": true
-      }
-    },
-    "tdd-guide": {
-      "description": "Test-Driven Development specialist enforcing write-tests-first methodology. Use when writing new features, fixing bugs, or refactoring code. Ensures 80%+ test coverage.",
-      "model": "openai/gpt-5.3-codex",
-      "thinking": "medium",
-      "mode": "subagent",
-      "prompt": "{file:./prompts/agents/tdd-guide.txt}",
-      "tools": {
-        "read": true,
-        "write": true,
-        "edit": true,
-        "bash": true
-      }
-    },
-    "build-error-resolver": {
-      "description": "Build and TypeScript error resolution specialist. Use when build fails or type errors occur. Fixes build/type errors only with minimal diffs.",
-      "model": "openai/gpt-5.3-codex-spark",
-      "thinking": "low",
-      "mode": "subagent",
-      "prompt": "{file:./prompts/agents/build-error-resolver.txt}",
-      "tools": {
-        "read": true,
-        "write": true,
-        "edit": true,
-        "bash": true
-      }
-    },
-    "e2e-runner": {
-      "description": "End-to-end testing specialist using Playwright. Generates, maintains, and runs E2E tests for critical user flows.",
-      "model": "openai/gpt-5.3-codex",
-      "thinking": "low",
-      "mode": "subagent",
-      "prompt": "{file:./prompts/agents/e2e-runner.txt}",
-      "tools": {
-        "read": true,
-        "write": true,
-        "edit": true,
-        "bash": true
-      }
-    },
-    "doc-updater": {
-      "description": "Documentation and codemap specialist. Use for updating codemaps and documentation.",
-      "model": "openai/gpt-5.4",
-      "thinking": "low",
-      "mode": "subagent",
-      "prompt": "{file:./prompts/agents/doc-updater.txt}",
-      "tools": {
-        "read": true,
-        "write": true,
-        "edit": true,
-        "bash": true
-      }
-    },
-    "refactor-cleaner": {
-      "description": "Dead code cleanup and consolidation specialist. Use for removing unused code, duplicates, and refactoring.",
-      "model": "kilo/minimax-m2.5-free",
-      "mode": "subagent",
-      "prompt": "{file:./prompts/agents/refactor-cleaner.txt}",
-      "tools": {
-        "read": true,
-        "write": true,
-        "edit": true,
-        "bash": true
-      }
-    },
-    "go-reviewer": {
-      "description": "Expert Go code reviewer specializing in idiomatic Go, concurrency patterns, error handling, and performance.",
-      "model": "openai/gpt-5.4",
-      "thinking": "medium",
-      "mode": "subagent",
-      "prompt": "{file:./prompts/agents/go-reviewer.txt}",
-      "tools": {
-        "read": true,
-        "bash": true,
-        "write": false,
-        "edit": false
-      }
-    },
-    "go-build-resolver": {
-      "description": "Go build, vet, and compilation error resolution specialist. Fixes Go build errors with minimal changes.",
-      "model": "openai/gpt-5.3-codex-spark",
-      "thinking": "low",
-      "mode": "subagent",
-      "prompt": "{file:./prompts/agents/go-build-resolver.txt}",
-      "tools": {
-        "read": true,
-        "write": true,
-        "edit": true,
-        "bash": true
-      }
-    },
-    "database-reviewer": {
-      "description": "PostgreSQL database specialist for query optimization, schema design, security, and performance. Incorporates Supabase best practices.",
-      "model": "openai/gpt-5.4",
-      "thinking": "medium",
-      "mode": "subagent",
-      "prompt": "{file:./prompts/agents/database-reviewer.txt}",
-      "tools": {
-        "read": true,
-        "write": true,
-        "edit": true,
-        "bash": true
-      }
-    },
-    "rust-reviewer": {
-      "description": "Expert Rust code reviewer for idiomatic patterns, ownership, lifetimes, and memory safety.",
-      "model": "openai/gpt-5.4",
-      "thinking": "high",
-      "mode": "subagent",
-      "prompt": "{file:./prompts/agents/rust-reviewer.txt}",
-      "tools": {
-        "read": true,
-        "bash": true,
-        "write": false,
-        "edit": false
-      }
-    },
-    "rust-clippy-fmt-check-tester": {
-      "description": "Rust build, clippy, fmt, and test error resolution specialist.",
-      "model": "openai/gpt-5.3-codex-spark",
-      "thinking": "low",
-      "mode": "subagent",
-      "prompt": "{file:./prompts/agents/rust-clippy-fmt-check-tester.txt}",
-      "tools": {
-        "read": true,
-        "bash": true,
-        "write": true,
-        "edit": true
-      }
-    },
     "explore": {
       "disable": true
     },
@@ -224,51 +42,35 @@
   "command": {
     "plan": {
       "description": "Create a detailed implementation plan for complex features",
-      "template": "{file:./commands/plan.md}\n\n$ARGUMENTS",
-      "agent": "planner",
-      "subtask": true
+      "template": "{file:./skills/planner/SKILL.md}\n\n$ARGUMENTS"
     },
     "tdd": {
       "description": "Enforce TDD workflow with 80%+ test coverage",
-      "template": "{file:./commands/tdd.md}\n\n$ARGUMENTS",
-      "agent": "tdd-guide",
-      "subtask": true
+      "template": "{file:./skills/tdd-guide/SKILL.md}\n\n$ARGUMENTS"
     },
     "code-review": {
       "description": "Review code for quality, security, and maintainability",
-      "template": "{file:./commands/code-review.md}\n\n$ARGUMENTS",
-      "agent": "code-reviewer",
-      "subtask": true
+      "template": "{file:./skills/code-reviewer/SKILL.md}\n\n$ARGUMENTS"
     },
     "security": {
       "description": "Run comprehensive security review",
-      "template": "{file:./commands/security.md}\n\n$ARGUMENTS",
-      "agent": "security-reviewer",
-      "subtask": true
+      "template": "{file:./skills/security-reviewer/SKILL.md}\n\n$ARGUMENTS"
     },
     "build-fix": {
       "description": "Fix build and TypeScript errors with minimal changes",
-      "template": "{file:./commands/build-fix.md}\n\n$ARGUMENTS",
-      "agent": "build-error-resolver",
-      "subtask": true
+      "template": "{file:./skills/build-error-resolver/SKILL.md}\n\n$ARGUMENTS"
     },
     "e2e": {
       "description": "Generate and run E2E tests with Playwright",
-      "template": "{file:./commands/e2e.md}\n\n$ARGUMENTS",
-      "agent": "e2e-runner",
-      "subtask": true
+      "template": "{file:./skills/e2e-runner/SKILL.md}\n\n$ARGUMENTS"
     },
     "refactor-clean": {
       "description": "Remove dead code and consolidate duplicates",
-      "template": "{file:./commands/refactor-clean.md}\n\n$ARGUMENTS",
-      "agent": "refactor-cleaner",
-      "subtask": true
+      "template": "{file:./skills/refactor-cleaner/SKILL.md}\n\n$ARGUMENTS"
     },
     "orchestrate": {
       "description": "Orchestrate multiple agents for complex tasks",
-      "template": "{file:./commands/orchestrate.md}\n\n$ARGUMENTS",
-      "agent": "planner",
-      "subtask": true
+      "template": "{file:./skills/planner/SKILL.md}\n\n$ARGUMENTS"
     },
     "learn": {
       "description": "Extract patterns and learnings from session",
@@ -288,21 +90,15 @@
     },
     "update-docs": {
       "description": "Update documentation",
-      "template": "{file:./commands/update-docs.md}\n\n$ARGUMENTS",
-      "agent": "doc-updater",
-      "subtask": true
+      "template": "{file:./skills/doc-updater/SKILL.md}\n\n$ARGUMENTS"
     },
     "update-codemaps": {
       "description": "Update codemaps",
-      "template": "{file:./commands/update-codemaps.md}\n\n$ARGUMENTS",
-      "agent": "doc-updater",
-      "subtask": true
+      "template": "{file:./skills/doc-updater/SKILL.md}\n\n$ARGUMENTS"
     },
     "test-coverage": {
       "description": "Analyze test coverage",
-      "template": "{file:./commands/test-coverage.md}\n\n$ARGUMENTS",
-      "agent": "tdd-guide",
-      "subtask": true
+      "template": "{file:./skills/tdd-guide/SKILL.md}\n\n$ARGUMENTS"
     },
     "setup-pm": {
       "description": "Configure package manager",
@@ -310,21 +106,15 @@
     },
     "go-review": {
       "description": "Go code review",
-      "template": "{file:./commands/go-review.md}\n\n$ARGUMENTS",
-      "agent": "go-reviewer",
-      "subtask": true
+      "template": "{file:./skills/go-reviewer/SKILL.md}\n\n$ARGUMENTS"
     },
     "go-test": {
       "description": "Go TDD workflow",
-      "template": "{file:./commands/go-test.md}\n\n$ARGUMENTS",
-      "agent": "tdd-guide",
-      "subtask": true
+      "template": "{file:./skills/tdd-guide/SKILL.md}\n\n$ARGUMENTS"
     },
     "go-build": {
       "description": "Fix Go build errors",
-      "template": "{file:./commands/go-build.md}\n\n$ARGUMENTS",
-      "agent": "go-build-resolver",
-      "subtask": true
+      "template": "{file:./skills/go-build-resolver/SKILL.md}\n\n$ARGUMENTS"
     },
     "skill-create": {
       "description": "Generate skills from git history",
@@ -348,15 +138,11 @@
     },
     "rust-review": {
       "description": "Review Rust code for idiomatic patterns",
-      "template": "{file:./commands/rust-review.md}\n\n$ARGUMENTS",
-      "agent": "rust-reviewer",
-      "subtask": true
+      "template": "{file:./skills/rust-reviewer/SKILL.md}\n\n$ARGUMENTS"
     },
     "rust-clippy-fmt-check": {
       "description": "Fix Rust clippy, fmt, and test errors",
-      "template": "{file:./commands/rust-clippy-fmt-check.md}\n\n$ARGUMENTS",
-      "agent": "rust-clippy-fmt-check-tester",
-      "subtask": true
+      "template": "{file:./skills/rust-clippy-fmt-check-tester/SKILL.md}\n\n$ARGUMENTS"
     }
   },
   "provider": {
@@ -497,7 +283,7 @@
       "npm": "@ai-sdk/openai-compatible",
       "name": "OpenRouter",
       "options": {
-        "baseURL": "https://openrouter.ai/api/v1",
+        "baseURL": "https://openrouter.ai/api/v1"
       },
       "models": {
         "hunter-alpha": {
